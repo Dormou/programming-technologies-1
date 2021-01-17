@@ -3,29 +3,44 @@ from sqlalchemy import create_engine, Table, Column, String, Float, MetaData
 from sqlalchemy.sql import select
 
 
-class DBWeatherManager:
+class DBManagerInterface:
     def __init__(self, url):
-        eng = create_engine(url)
-        md = MetaData()
-        md.create_all(eng)
+        self.eng = create_engine(url)
+        self.md = MetaData()
+        self.md.create_all(self.eng)
+        self.conn = self.eng.connect()
+        self.table = Table()
+
+    def write(self, data: list):
+        pass
+
+    def read(self):
+        pass
+
+
+class DBWeatherManager (DBManagerInterface):
+    def __init__(self, url):
+        super().__init__(url)
+        self.define_table()
+
+    def define_table(self):
         self.table = Table(
             'weather',
-            md,
+            self.md,
             Column('date', String),
             Column('mint', Float),
             Column('maxt', Float),
             Column('location', String),
             Column('humidity', Float),
         )
-        self.conn = eng.connect()
 
-    def insert(self, data: list):
+    def write(self, data: list) -> None:
         try:
             self.conn.execute(self.table.insert(), data)
         except Exception as ex:
             print("Error while write data in weather database")
 
-    def select_all(self):
+    def read(self) -> list:
         try:
             return self.conn.execute(select([self.table]))
         except Exception as ex:
@@ -63,7 +78,7 @@ class WeatherProvider:
 
 db = DBWeatherManager('sqlite:///weather.sqlite3')
 provider = WeatherProvider('4978GENE8GJ3U5X4LBT2R9LBU')
-db.insert(provider.get_data('Volgograd,Russia', '2020-09-20', '2020-09-29'))
+db.write(provider.get_data('Volgograd,Russia', '2020-09-20', '2020-09-29'))
 
-for row in db.select_all():
+for row in db.read():
     print(row)
