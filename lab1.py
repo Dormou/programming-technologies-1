@@ -11,10 +11,10 @@ class DBManagerInterface:
         self.conn = self.eng.connect()
         self.table = Table()
 
-    def write(self, data: list):
+    def write(self, data: list) -> None:
         pass
 
-    def read(self):
+    def read(self) -> list:
         pass
 
 
@@ -23,7 +23,7 @@ class DBWeatherManager (DBManagerInterface):
         super().__init__(url)
         self.define_table()
 
-    def define_table(self):
+    def define_table(self) -> None:
         self.table = Table(
             'weather',
             self.md,
@@ -48,12 +48,20 @@ class DBWeatherManager (DBManagerInterface):
             return []
 
 
-class WeatherProvider:
+class WeatherProviderInterface:
     def __init__(self, key):
         self.key = key
 
-    def get_data(self, location, start_date, end_date):
-        url = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/weatherdata/history'
+    def get_weather(self, location, start_date, end_date) -> list:
+        pass
+
+
+class WeatherVCProvider(WeatherProviderInterface):
+    def __init__(self, key):
+        super().__init__(key)
+        self.url = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/weatherdata/history'
+
+    def get_weather(self, location, start_date, end_date) -> list:
         params = {
             'aggregateHours': 24,
             'startDateTime': f'{start_date}T00:0:00',
@@ -63,7 +71,7 @@ class WeatherProvider:
             'key': self.key,
             'contentType': 'json',
         }
-        data = requests.get(url, params).json()
+        data = requests.get(self.url, params).json()
         return [
             {
                 'date': row['datetimeStr'][:10],
@@ -77,8 +85,8 @@ class WeatherProvider:
 
 
 db = DBWeatherManager('sqlite:///weather.sqlite3')
-provider = WeatherProvider('4978GENE8GJ3U5X4LBT2R9LBU')
-db.write(provider.get_data('Volgograd,Russia', '2020-09-20', '2020-09-29'))
+provider = WeatherVCProvider('4978GENE8GJ3U5X4LBT2R9LBU')
+db.write(provider.get_weather('Volgograd,Russia', '2020-09-20', '2020-09-29'))
 
 for row in db.read():
     print(row)
