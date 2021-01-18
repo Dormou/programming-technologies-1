@@ -1,4 +1,5 @@
 import requests
+import argparse
 from sqlalchemy import create_engine, Table, Column, String, Float, MetaData
 from sqlalchemy.sql import select
 
@@ -77,16 +78,30 @@ class WeatherVCProvider(WeatherProviderInterface):
                 'date': row['datetimeStr'][:10],
                 'mint': row['mint'],
                 'maxt': row['maxt'],
-                'location': 'Volgograd,Russia',
+                'location': location,
                 'humidity': row['humidity'],
             }
             for row in data['locations'][location]['values']
         ]
 
 
-db = DBWeatherManager('sqlite:///weather.sqlite3')
-provider = WeatherVCProvider('4978GENE8GJ3U5X4LBT2R9LBU')
-db.write(provider.get_weather('Volgograd,Russia', '2020-09-20', '2020-09-29'))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Get weather info')
+    parser.add_argument('location', help='location for loading weather', type=str)
+    parser.add_argument('start_date', help='start date of uploading information', type=str)
+    parser.add_argument('end_date', help='end date of uploading information', type=str)
+    parser.add_argument('--output', help='output file path', type=str)
+    args = parser.parse_args()
 
-for row in db.read():
-    print(row)
+    db = DBWeatherManager('sqlite:///weather.sqlite3')
+    provider = WeatherVCProvider('4978GENE8GJ3U5X4LBT2R9LBU')
+    db.write(provider.get_weather(args.location, args.start_date, args.end_date))
+
+    weather = db.read()
+    if args.output:
+        with open(args.output, 'w') as f:
+            for row in weather:
+                f.write(str(row) + '\n')
+    else:
+        for row in weather:
+            print(row)
